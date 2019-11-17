@@ -1,0 +1,8 @@
+README.md
+espn_fantasy_rugby/__init__.py
+espn_fantasy_rugby/points_predictor.py
+espn_fantasy_rugby/team_selector.py
+espn_fantasy_rugby.egg-info/PKG-INFO
+espn_fantasy_rugby.egg-info/SOURCES.txt
+espn_fantasy_rugby.egg-info/dependency_links.txt
+espn_fantasy_rugby.egg-info/top_level.txt
