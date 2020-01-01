@@ -31,8 +31,8 @@ POS_THRESHOLDS = {
     'FR': 3
 }
 
-
 MAX_COUNTRY = 4
+MAX_NUM_CHANGES = 3
 
 
 def get_initial_team(first_round_players, espn_data):
@@ -57,7 +57,7 @@ def get_initial_team(first_round_players, espn_data):
 
 def create_pulp_varnames(x):
 
-    return 'Player_' + x.replace(" ", "_")
+    return 'Player_' + x.replace(" ", "_").replace("-", "_")
 
 
 def create_team_selection_problem(player_forecasts):
@@ -108,23 +108,29 @@ def add_nationality_constraint(prob, player_forecasts, max_num_from_country=MAX_
     }
 
     prob += pulp.lpSum(
-        [wal_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "WAL_Requirement"
+        [
+            wal_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country,  "WAL_Requirement"
     prob += pulp.lpSum(
-        [eng_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "ENG_Requirement"
+        [
+            eng_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country, "ENG_Requirement"
     prob += pulp.lpSum(
-        [ire_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "IRE_Requirement"
+        [
+            ire_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country, "IRE_Requirement"
     prob += pulp.lpSum(
-        [fra_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "FRA_Requirement"
+        [
+            fra_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country, "FRA_Requirement"
     prob += pulp.lpSum(
-        [sco_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "SCO_Requirement"
+        [
+            sco_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country, "SCO_Requirement"
     prob += pulp.lpSum(
-        [ita_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
-            "ITA_Requirement"
+        [
+            ita_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()
+        ]) <= max_num_from_country, "ITA_Requirement"
 
     return prob
 
@@ -171,7 +177,7 @@ def add_position_constraint(prob, player_forecasts):
     return prob
 
 
-def add_round_changes_constraint(prob, player_forecasts, previous_team, max_num_changes=3):
+def add_round_changes_constraint(prob, player_forecasts, previous_team, max_num_changes=MAX_NUM_CHANGES):
 
     number_of_players_to_keep = 15 - max_num_changes
 
@@ -249,7 +255,7 @@ def simulate_tournament(espn_data, team, features, target):
             problem = create_team_selection_problem(player_forecasts)
             problem = add_nationality_constraint(problem, player_forecasts)
             problem = add_position_constraint(problem, player_forecasts)
-            problem = add_round_changes_constraint(problem, player_forecasts, previous_players)
+            # problem = add_round_changes_constraint(problem, player_forecasts, previous_players)
 
             team = get_team(problem, player_forecasts)
             team_predictions = get_predicted_player_points(team, player_forecasts)

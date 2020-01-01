@@ -3,6 +3,20 @@ import sklearn.model_selection
 import sklearn.ensemble
 
 
+def clean_names(data):
+    """
+
+    :param data:
+    :return:
+    """
+
+    data['NAME'] = data['NAME'].replace('-', ' ')
+    data['NAME'] = data['NAME'].replace('\'', ' ')
+    data['NAME'] = data['NAME'].replace('.', '')
+
+    return data
+
+
 def get_starters(data):
     """
 
@@ -116,6 +130,7 @@ def get_player_points_predictions(trainedmodel, data, target):
 
 def get_results(espn_data, features, target, stage):
 
+    espn_data = clean_names(espn_data)
     espn_data = get_starters(espn_data)
 
     training_data = get_player_info_previous_rounds(espn_data, stage)
