@@ -32,15 +32,27 @@ POS_THRESHOLDS = {
 }
 
 
+MAX_COUNTRY = 4
+
+
 def get_initial_team(first_round_players, espn_data):
     team = espn_data.loc[
         espn_data['NAME'].isin(first_round_players)
     ][['NAME', 'TEAM', 'POS']].drop_duplicates().reset_index(drop=True)
 
-    if len(team) == 15:
+    satisfy_criteria = True
+
+    if len(team) != 15:
+        satisfy_criteria = False
+    if team['TEAM'].value_counts().max() > MAX_COUNTRY:
+        satisfy_criteria = False
+    if team['POS'].value_counts().to_dict() != POS_THRESHOLDS:
+        satisfy_criteria = False
+
+    if satisfy_criteria:
         return team
     else:
-        raise Exception('The selected team does not contain fifteen valid players')
+        raise Exception('The selected team does not satisfy all specified criteria')
 
 
 def create_pulp_varnames(x):
@@ -74,7 +86,7 @@ def create_team_selection_problem(player_forecasts):
     return prob
 
 
-def add_nationality_constraint(prob, player_forecasts, max_num_from_country=3):
+def add_nationality_constraint(prob, player_forecasts, max_num_from_country=MAX_COUNTRY):
 
     wal_nation = {
         name: 1 if team == 'WAL' else 0 for name, team in zip(player_forecasts['VARNAME'], player_forecasts['TEAM'])
@@ -96,17 +108,23 @@ def add_nationality_constraint(prob, player_forecasts, max_num_from_country=3):
     }
 
     prob += pulp.lpSum(
-        [wal_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "WAL_Requirement"
+        [wal_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "WAL_Requirement"
     prob += pulp.lpSum(
-        [eng_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "ENG_Requirement"
+        [eng_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "ENG_Requirement"
     prob += pulp.lpSum(
-        [ire_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "IRE_Requirement"
+        [ire_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "IRE_Requirement"
     prob += pulp.lpSum(
-        [fra_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "FRA_Requirement"
+        [fra_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "FRA_Requirement"
     prob += pulp.lpSum(
-        [sco_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "SCO_Requirement"
+        [sco_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "SCO_Requirement"
     prob += pulp.lpSum(
-        [ita_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country, "ITA_Requirement"
+        [ita_nation[i] * prob.variablesDict()[i] for i in prob.variablesDict().keys()]) <= max_num_from_country,\
+            "ITA_Requirement"
 
     return prob
 
@@ -177,8 +195,7 @@ def get_team(prob, player_forecasts):
     player_variables = {str(value): key for key, value in zip(players, prob.variables())}
     prob.solve()
 
-    if pulp.LpStatus[prob.status] != 'Optimal':
-        print("No optimal solution found: check your initial team")
+    print(pulp.LpStatus[prob.status])
 
     team = pandas.DataFrame()
 
