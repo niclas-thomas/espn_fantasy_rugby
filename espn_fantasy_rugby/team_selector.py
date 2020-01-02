@@ -81,7 +81,8 @@ def create_team_selection_problem(player_forecasts):
     )
 
     prob = pulp.LpProblem("ESPN Fantasy Rugby", pulp.LpMaximize)
-    prob += pulp.lpSum([player_points[i] * player_vars[i] for i in players]), "Total Points Scored"
+    # Hack to include all players, even non-zero
+    prob += pulp.lpSum([(player_points[i]) * player_vars[i] for i in players]), "Total Points Scored"
 
     return prob
 
@@ -201,6 +202,8 @@ def get_team(prob, player_forecasts):
     player_variables = {str(value): key for key, value in zip(players, prob.variables())}
     prob.solve()
 
+    print(prob)
+
     print(pulp.LpStatus[prob.status])
 
     team = pandas.DataFrame()
@@ -253,7 +256,7 @@ def simulate_tournament(espn_data, team, features, target):
                 espn_data, features, target, tournament_round
             )
             problem = create_team_selection_problem(player_forecasts)
-            problem = add_nationality_constraint(problem, player_forecasts)
+            # problem = add_nationality_constraint(problem, player_forecasts)
             problem = add_position_constraint(problem, player_forecasts)
             # problem = add_round_changes_constraint(problem, player_forecasts, previous_players)
 

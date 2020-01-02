@@ -24,7 +24,7 @@ def get_starters(data):
     :return:
     """
 
-    data = data[data['SM'] == 1].reset_index(drop=True)
+    # data = data[data['SM'] == 1].reset_index(drop=True)
 
     return data
 
