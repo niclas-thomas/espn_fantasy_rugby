@@ -123,7 +123,8 @@ def get_player_points_predictions(trainedmodel, data, target):
     data = data[features]
 
     exact_predictions = trainedmodel.predict(data)
-    rounded_predictions = [round(i) for i in exact_predictions]
+    # hack to include all variables inc 0s
+    rounded_predictions = [round(i+1) for i in exact_predictions]
 
     return rounded_predictions
 

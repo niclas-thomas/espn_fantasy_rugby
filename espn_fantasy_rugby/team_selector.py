@@ -50,7 +50,7 @@ def get_initial_team(first_round_players, espn_data):
         satisfy_criteria = False
 
     if satisfy_criteria:
-        return team
+        return team.sort_values('POS')
     else:
         raise Exception('The selected team does not satisfy all specified criteria')
 
@@ -72,7 +72,7 @@ def create_team_selection_problem(player_forecasts):
     player_forecasts = player_forecasts.sort_values('NAME')
     players = player_forecasts['NAME']
     player_points = player_forecasts[['NAME', 'PREDICTION']].set_index('NAME').to_dict()['PREDICTION']
-    player_vars = pulp.LpVariable.dicts(
+    player_variable = pulp.LpVariable.dicts(
         name="Player",
         indexs=players,
         lowBound=0,
@@ -81,10 +81,9 @@ def create_team_selection_problem(player_forecasts):
     )
 
     prob = pulp.LpProblem("ESPN Fantasy Rugby", pulp.LpMaximize)
-    # Hack to include all players, even non-zero
-    prob += pulp.lpSum([(player_points[i]) * player_vars[i] for i in players]), "Total Points Scored"
+    prob += pulp.lpSum([(player_points[i]) * player_variable[i] for i in players]), "Total Points Scored"
 
-    return prob
+    return prob, player_variable
 
 
 def add_nationality_constraint(prob, player_forecasts, max_num_from_country=MAX_COUNTRY):
@@ -193,28 +192,26 @@ def add_round_changes_constraint(prob, player_forecasts, previous_team, max_num_
     return prob
 
 
-def get_team(prob, player_forecasts):
+def get_team(prob, player_forecasts, player_variable):
 
-    player_forecasts = player_forecasts.sort_values('NAME')
-    players = player_forecasts['NAME']
-    player_positions = player_forecasts[['NAME', 'POS']].set_index('NAME').to_dict()['POS']
+    player_position = player_forecasts[['NAME', 'POS']].set_index('NAME').to_dict()['POS']
     player_nationality = player_forecasts[['NAME', 'TEAM']].set_index('NAME').to_dict()['TEAM']
-    player_variables = {str(value): key for key, value in zip(players, prob.variables())}
+
+    variable_player = {str(value): key for key, value in player_variable.items()}
     prob.solve()
 
-    print(prob)
-
-    print(pulp.LpStatus[prob.status])
+    if pulp.LpStatus[prob.status] != 'Optimal':
+        print(pulp.LpStatus[prob.status])
 
     team = pandas.DataFrame()
 
     for v in prob.variables():
         if v.varValue == 1:
-            name = player_variables[v.name]
+            name = variable_player[v.name]
             team = team.append(pandas.DataFrame({
                 'NAME': [name],
                 'TEAM': [player_nationality[name]],
-                'POS': [player_positions[name]]
+                'POS': [player_position[name]]
             }))
 
     return team
@@ -255,12 +252,12 @@ def simulate_tournament(espn_data, team, features, target):
             player_forecasts = get_results(
                 espn_data, features, target, tournament_round
             )
-            problem = create_team_selection_problem(player_forecasts)
-            # problem = add_nationality_constraint(problem, player_forecasts)
+            problem, player_variable = create_team_selection_problem(player_forecasts)
+            problem = add_nationality_constraint(problem, player_forecasts)
             problem = add_position_constraint(problem, player_forecasts)
-            # problem = add_round_changes_constraint(problem, player_forecasts, previous_players)
+            problem = add_round_changes_constraint(problem, player_forecasts, previous_players)
 
-            team = get_team(problem, player_forecasts)
+            team = get_team(problem, player_forecasts, player_variable)
             team_predictions = get_predicted_player_points(team, player_forecasts)
 
         team_actuals = get_actual_player_points(team, espn_data, tournament_round)
@@ -325,20 +322,36 @@ def show_team(team_actuals, ax):
     ]
 
     for ix, row in team_actuals.iterrows():
-        ax.text(
-            coords[ix][0],
-            coords[ix][1],
-            '{} ({})'.format(row['NAME'], row['MDP']),
-            ha='center',
-            va='center',
-            fontsize=11,
-            color=TEAM_FONT_COLORS[row['TEAM']],
-            bbox=dict(
-                boxstyle='round,pad=1',
-                facecolor=TEAM_COLORS[row['TEAM']],
-                alpha=1
+        if 'MDP' in team_actuals.columns:
+            ax.text(
+                coords[ix][0],
+                coords[ix][1],
+                '{} ({})'.format(row['NAME'], row['MDP']),
+                ha='center',
+                va='center',
+                fontsize=11,
+                color=TEAM_FONT_COLORS[row['TEAM']],
+                bbox=dict(
+                    boxstyle='round,pad=1',
+                    facecolor=TEAM_COLORS[row['TEAM']],
+                    alpha=1
+                )
             )
-        )
+        else:
+            ax.text(
+                coords[ix][0],
+                coords[ix][1],
+                '{}'.format(row['NAME']),
+                ha='center',
+                va='center',
+                fontsize=11,
+                color=TEAM_FONT_COLORS[row['TEAM']],
+                bbox=dict(
+                    boxstyle='round,pad=1',
+                    facecolor=TEAM_COLORS[row['TEAM']],
+                    alpha=1
+                )
+            )
 
     ax.set_xlim(0, 4)
     ax.set_ylim(0, 8)
