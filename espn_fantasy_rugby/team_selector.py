@@ -60,7 +60,7 @@ def create_pulp_varnames(x):
     return 'Player_' + x.replace(" ", "_").replace("-", "_")
 
 
-def create_team_selection_problem(player_forecasts):
+def create_team_selection_problem(player_forecasts, target='PREDICTION'):
     """
 
     :param player_forecasts:
@@ -71,7 +71,7 @@ def create_team_selection_problem(player_forecasts):
 
     player_forecasts = player_forecasts.sort_values('NAME')
     players = player_forecasts['NAME']
-    player_points = player_forecasts[['NAME', 'PREDICTION']].set_index('NAME').to_dict()['PREDICTION']
+    player_points = player_forecasts[['NAME', target]].set_index('NAME').to_dict()[target]
     player_variable = pulp.LpVariable.dicts(
         name="Player",
         indexs=players,
